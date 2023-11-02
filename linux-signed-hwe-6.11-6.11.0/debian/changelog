@@ -1,0 +1,132 @@
+linux-signed-hwe-6.11 (6.11.0-28.28~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-28.28~24.04.1
+
+  * Packaging resync (LP: #1786013)
+    - [Packaging] update variants
+    - [Packaging] debian/tracking-bug -- resync from main package
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Fri, 23 May 2025 10:59:39 +0200
+
+linux-signed-hwe-6.11 (6.11.0-26.26~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-26.26~24.04.1
+
+  * Packaging resync (LP: #1786013)
+    - [Packaging] debian/tracking-bug -- resync from main package
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Thu, 17 Apr 2025 19:38:17 +0200
+
+linux-signed-hwe-6.11 (6.11.0-25.25~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-25.25~24.04.1
+
+  * Packaging resync (LP: #1786013)
+    - [Packaging] debian/tracking-bug -- resync from main package
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Tue, 15 Apr 2025 15:33:27 +0200
+
+linux-signed-hwe-6.11 (6.11.0-24.24~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-24.24~24.04.1
+
+  * Packaging resync (LP: #1786013)
+    - [Packaging] debian/tracking-bug -- resync from main package
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Tue, 25 Mar 2025 17:36:59 +0100
+
+linux-signed-hwe-6.11 (6.11.0-21.21~24.04.1+1) noble; urgency=medium
+
+  * No-change rebuild request to pick up new core-initramfs.
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Thu, 06 Mar 2025 12:04:52 +0100
+
+linux-signed-hwe-6.11 (6.11.0-21.21~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-21.21~24.04.1
+
+  * Packaging resync (LP: #1786013)
+    - [Packaging] debian/tracking-bug -- resync from main package
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Mon, 24 Feb 2025 16:25:08 +0100
+
+linux-signed-hwe-6.11 (6.11.0-19.19~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-19.19~24.04.1
+
+  * Packaging resync (LP: #1786013)
+    - [Packaging] update variants
+    - [Packaging] debian/tracking-bug -- resync from main package
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Mon, 17 Feb 2025 11:17:16 +0100
+
+linux-signed-hwe-6.11 (6.11.0-18.18~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-18.18~24.04.1
+
+ -- Manuel Diewald <manuel.diewald@canonical.com>  Sat, 08 Feb 2025 19:27:02 +0100
+
+linux-signed-hwe-6.11 (6.11.0-17.17~24.04.2) noble; urgency=medium
+
+  * Main version: 6.11.0-17.17~24.04.2
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Mon, 20 Jan 2025 21:51:18 +0100
+
+linux-signed-hwe-6.11 (6.11.0-17.17~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-17.17~24.04.1
+
+  * Packaging resync (LP: #1786013)
+    - [Packaging] debian/tracking-bug -- resync from main package
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Mon, 20 Jan 2025 18:30:23 +0100
+
+linux-signed-hwe-6.11 (6.11.0-14.15~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-14.15~24.04.1
+
+  * Packaging resync (LP: #1786013)
+    - [Packaging] debian/tracking-bug -- resync from main package
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Wed, 15 Jan 2025 17:07:09 +0100
+
+linux-signed-hwe-6.11 (6.11.0-13.14~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-13.14~24.04.1
+
+  * Packaging resync (LP: #1786013)
+    - [Packaging] debian/tracking-bug -- resync from main package
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Wed, 04 Dec 2024 11:32:10 +0100
+
+linux-signed-hwe-6.11 (6.11.0-12.13~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-12.13~24.04.1
+
+  * Packaging resync (LP: #1786013)
+    - [Packaging] resync git-ubuntu-log
+    - [Packaging] update variants
+    - [Packaging] debian/tracking-bug -- resync from main package
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Fri, 22 Nov 2024 10:41:50 +0100
+
+linux-signed-hwe-6.11 (6.11.0-9.9~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-9.9~24.04.1
+
+  * Packaging resync (LP: #1786013)
+    - [Packaging] debian/tracking-bug -- resync from main package
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Wed, 16 Oct 2024 15:59:01 +0200
+
+linux-signed-hwe-6.11 (6.11.0-8.8~24.04.1) noble; urgency=medium
+
+  * First manual crank (no tracker)
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Mon, 14 Oct 2024 17:58:35 +0200
+
+linux-signed-hwe-6.11 (6.11.0-0.0~24.04.1) noble; urgency=medium
+
+  * Start noble:linux-hwe-6.11 packaging
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Wed, 25 Sep 2024 09:43:50 +0200

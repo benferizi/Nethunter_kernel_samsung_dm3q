@@ -1,0 +1,12 @@
+Source: @SRCPKGNAME@
+Section: kernel
+Priority: optional
+Maintainer: Canonical Kernel Team <kernel-team@lists.ubuntu.com>
+Build-Depends:
+ debhelper (>= 9),
+ lsb-release,
+ python3,
+ python3-apt,
+Build-Depends-Arch:
+ @DEPENDS@,
+Standards-Version: 3.9.4

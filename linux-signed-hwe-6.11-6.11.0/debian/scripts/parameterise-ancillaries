@@ -1,0 +1,90 @@
+#!/usr/bin/python3 -B
+
+import os
+import sys
+import json
+from shutil import copy
+from textwrap import dedent, indent
+
+from config import Signing
+
+
+def build_changelog(outd, source_name):
+    # Convert debian/changelog: fix the package names and limit to 5 stanzas.
+    in_changelog = os.path.join("debian", "changelog")
+    out_changelog = os.path.join(outd, "debian", "changelog")
+    with open(in_changelog) as ifd, open(out_changelog, "w") as ofd:
+        first = True
+        stanza = 0
+        for line in ifd:
+            if line[0] not in (" ", "\n"):
+                stanza += 1
+                first = True
+                if stanza == 6:
+                    break
+            if first:
+                bits = line.split()
+                bits[0] = source_name
+                print(" ".join(bits), file=ofd)
+                first = False
+            else:
+                print(line, end="", file=ofd)
+
+# Build one of the ancillaries.
+def build_ancillary(family, package):
+    for outd in (
+        os.path.join("debian", "ancillary", package),
+        os.path.join("debian", "ancillary", family),
+    ):
+        if os.path.exists(outd):
+            break
+    else:
+        print(f"ERROR: {outd} directory not found", file=sys.stderr)
+        sys.exit(1)
+
+    os.makedirs(os.path.join(outd, "debian"), exist_ok=True)
+    build_changelog(outd, package)
+    for file in (
+        os.path.join("debian", "compat"),
+        os.path.join("debian", "copyright"),
+        os.path.join("debian", "source", "format"),
+        os.path.join("debian", "source", "options"),
+    ):
+        os.makedirs(os.path.dirname(os.path.join(outd, file)), exist_ok=True)
+        copy(file, os.path.join(outd, file))
+
+    # Convert debian/control: pull off and rename the source stanza, then add a
+    # simple build interlock package as we have to produce something.
+    in_control = os.path.join("debian", "control")
+    out_control = os.path.join(outd, "debian", "control.common")
+    with open(in_control) as ifd, open(out_control, "w") as ofd:
+        for line in ifd:
+            line = line.rstrip()
+            if len(line) == 0:
+                break
+            if line.startswith("Source:"):
+                line = f"Source: {package}"
+
+            # Honour package profile selectors:
+            if "<!pkg." + family + ">" in line:
+                continue
+            line = line.replace(" <pkg." + family + ">","")
+
+            print(line, file=ofd)
+
+    # Also dump out the files.json for -generate et al.
+    ancillary_dir = os.path.join(outd, "debian")
+    os.makedirs(ancillary_dir, exist_ok=True)
+    with open(os.path.join(ancillary_dir, "files.json"), "w") as ffd:
+        to_sign = {}
+        for (arch, flavour), (stype, binary) in signing.arch_flavour_data:
+            to_sign.setdefault("files", []).append({"sig_type": stype, "file": f"/boot/{binary}-{abi_version}-{flavour}", "arch": arch})
+        files = {package: to_sign}
+        json.dump(files, ffd, indent=2, sort_keys=True)
+
+
+abi_version, gen_pkg = sys.argv[1:]
+
+signing = Signing.load("debian/package.config")
+
+build_ancillary("linux-generate", gen_pkg)

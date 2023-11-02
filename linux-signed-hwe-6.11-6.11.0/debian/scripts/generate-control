@@ -1,0 +1,141 @@
+#!/usr/bin/python3 -B
+
+import os
+import sys
+from textwrap import dedent
+
+from config import Signing
+
+(series, source_name, generate_name, source_version, unsigned_name, unsigned_version, abi_version) = sys.argv[1:]
+
+signing = Signing.load("debian/package.config")
+
+with open("debian/control.stub") as tfd, open("debian/control", "w") as cfd:
+    for line in tfd:
+        line = line.replace("@SRCPKGNAME@", source_name)
+        line = line.replace("@SERIES@", series)
+        if "@DEPENDS@" in line:
+            for flavour, archs in signing.flavour_archs:
+                print(f' linux-image-unsigned-{abi_version}-{flavour} (= {unsigned_version}) [{" ".join(archs)}],', file=cfd)
+                print(f' linux-buildinfo-{abi_version}-{flavour} (= {unsigned_version}) [{" ".join(archs)}],', file=cfd)
+            # generate-only build-depends with a profile (activated by parameterise-ancillaries)
+            uci_archs = set()
+            for _, archs in signing.package_flavour_archs("cvm"):
+                uci_archs.update(archs)
+            for _, archs in signing.package_flavour_archs("uc"):
+                uci_archs.update(archs)
+            if uci_archs:
+                print(f' ubuntu-core-initramfs [{" ".join(sorted(uci_archs))}] <pkg.linux-generate>,', file=cfd)
+            print(f" {generate_name} (= {source_version}) <!pkg.linux-generate>,", file=cfd)
+            for flavour, archs in signing.package_flavour_archs("extra"):
+                # ubuntu-core-initramfs sometime needs extra modules https://bugs.launchpad.net/bugs/2032760
+                print(f' linux-modules-extra-{abi_version}-{flavour} (= {unsigned_version}) [{" ".join(sorted(archs))}]  <pkg.linux-generate>,', file=cfd)
+            efi_archs = set()
+            for (arch, flavour), (stype, binary) in signing.arch_flavour_data:
+                if stype == 'efi':
+                    efi_archs.update([arch])
+            if efi_archs:
+                print(f' sbsigntool [{" ".join(sorted(efi_archs))}],', file=cfd)
+            # For HMACs
+            print(f" openssl,", file=cfd)
+        else:
+            print(line, end='', file=cfd)
+
+    for flavour, archs in signing.package_flavour_archs("image"):
+        print(dedent(f"""\
+
+            Package: linux-image-{abi_version}-{flavour}
+            Architecture: {" ".join(archs)}
+            Depends: ${{unsigned:Depends}}
+            Recommends: ${{unsigned:Recommends}}
+            Suggests: ${{unsigned:Suggests}}
+            Conflicts: ${{unsigned:Conflicts}}
+            Provides: ${{unsigned:Provides}}
+            Built-Using: {unsigned_name} (= {unsigned_version})
+            Description: Signed kernel image {flavour}
+             A kernel image for {flavour}.  This version of it is signed with
+             Canonical's signing key.
+            """).rstrip(), file=cfd)
+    for flavour, archs in signing.package_flavour_archs("di"):
+        print(dedent(f"""\
+
+            Package: kernel-signed-image-{abi_version}-{flavour}-di
+            Package-Type: udeb
+            Section: debian-installer
+            Priority: extra
+            Provides: kernel-signed-image
+            Architecture: {" ".join(archs)}
+            Built-Using: {unsigned_name} (= {unsigned_version})
+            Description: Signed kernel image {flavour} for the Debian installer
+             A kernel image for {flavour}.  This version of it is signed with
+             Canonical's UEFI signing key.  It is intended for the Debian installer,
+             it does _not_ provide a usable kernel for your full Debian system.
+        """).rstrip(), file=cfd)
+    for flavour, archs in signing.package_flavour_archs("hmac"):
+        print(dedent(f"""\
+
+            Package: linux-image-hmac-{abi_version}-{flavour}
+            Build-Profiles: <!stage1>
+            Architecture: {" ".join(archs)}
+            Section: kernel
+            Priority: optional
+            Depends: ${{misc:Depends}}, ${{shlibs:Depends}}, linux-image-{abi_version}-{flavour}
+            Suggests: fips-initramfs-generic
+            Description: HMAC file for linux kernel image {abi_version}-{flavour}
+             This package contains the HMAC file for Linux kernel image for version
+             {abi_version}-{flavour}
+            """).rstrip(), file=cfd)
+    for flavour, archs in signing.package_flavour_archs("cvm"):
+        # Mostly similar to image, but we don't have recommands nor conflicts
+        print(dedent(f"""\
+
+            Package: linux-image-{abi_version}-{flavour}-fde
+            Architecture: {" ".join(archs)}
+            Depends: ${{unsigned:Depends}}
+            Recommends: ${{cvm:Recommends}}
+            Suggests: ${{unsigned:Suggests}}
+            Conflicts: ${{cvm:Conflicts}}
+            Provides: ${{unsigned:Provides}}
+            Built-Using: {unsigned_name} (= {unsigned_version})
+            Description: Signed kernel image {flavour} for CVM
+             A kernel image for {flavour}.  This version of it is signed with
+             Canonical's signing key.
+            """).rstrip(), file=cfd)
+    for flavour, archs in signing.package_flavour_archs("uc"):
+        depends = f"linux-modules-{abi_version}-{flavour}"
+        for extra_flavour, extra_archs in signing.package_flavour_archs("extra"):
+            if extra_flavour == flavour:
+                depends += f", linux-modules-extra-{abi_version}-{flavour} [{' '.join(sorted(extra_archs))}]"
+        # Mostly similar to image, but we don't have recommands nor conflicts
+        print(dedent(f"""\
+
+            Package: linux-image-uc-{abi_version}-{flavour}
+            Architecture: {" ".join(archs)}
+            Depends: {depends}
+            Built-Using: {unsigned_name} (= {unsigned_version})
+            Description: Signed kernel image {flavour} for Ubuntu Core
+             A kernel image for {flavour}.  This version of it is signed with
+             Canonical's signing key.
+            """).rstrip(), file=cfd)
+    # XXX: all dbgsym packages _must_ be at the end of debian/control else the
+    # build will hang forever on the builder.
+    for flavour, archs in signing.package_flavour_archs("image"):
+        print(dedent(f"""\
+
+            Package: linux-image-{abi_version}-{flavour}-dbgsym
+            Section: devel
+            Architecture: {" ".join(archs)}
+            Depends: linux-image-unsigned-{abi_version}-{flavour}-dbgsym
+            Description: Signed kernel image {flavour}
+             A link to the debugging symbols for the {flavour} signed kernel.
+            """).rstrip(), file=cfd)
+    for flavour, archs in signing.package_flavour_archs("cvm"):
+        print(dedent(f"""\
+
+            Package: linux-image-{abi_version}-{flavour}-fde-dbgsym
+            Section: devel
+            Architecture: {" ".join(archs)}
+            Depends: linux-image-unsigned-{abi_version}-{flavour}-dbgsym
+            Description: Signed kernel image {flavour} for CVM (debug)
+             A link to the debugging symbols for the {flavour} signed kernel.
+            """).rstrip(), file=cfd)

@@ -1,0 +1,115 @@
+#!/usr/bin/python3
+
+import os
+import sys
+import json
+from textwrap import dedent, indent
+
+
+def dedent_makefile(raw, prefix=''):
+    lines = []
+    for line in indent(dedent(raw), prefix=prefix).rstrip().split("\n"):
+        lines.append(line.replace("    ", "	", 1))
+    return "\n".join(lines)
+
+with open("debian/changelog") as cfd:
+    bits = cfd.readline().split()
+    source_name = bits[0]
+
+with open("debian/files.json") as ffd:
+    signing_config = json.load(ffd)
+
+if source_name not in signing_config:
+    raise ValueError(f"{source_name} not found in files.json")
+
+to_sign = signing_config[source_name]
+
+overall_archs = set()
+for file in to_sign["files"]:
+    overall_archs.add(file["arch"])
+
+# Convert debian/control: pull off and rename the source stanza.  Also add a
+# simple build interlock package as we have to produce something.
+in_control = os.path.join("debian", "control.common")
+out_control = os.path.join("debian", "control")
+with open(in_control) as ifd, open(out_control, "w") as ofd:
+    for line in ifd:
+        print(line, end='', file=ofd)
+
+    print(dedent(f"""\
+
+        Package: {source_name}
+        Architecture: {" ".join(sorted(overall_archs))}
+        Section: kernel
+        Description: Build interlock package
+         Build interlock package.  You do not want to install this package.
+        """.rstrip()), file=ofd)
+
+out_rules = os.path.join("debian", "rules.gen")
+with open(out_rules, "w") as ofd:
+    print(dedent_makefile("""\
+        #! /usr/bin/make -f
+        arch = $(shell dpkg-architecture -qDEB_HOST_ARCH)
+        source = $(shell dpkg-parsechangelog -SSource)
+        version = $(shell dpkg-parsechangelog -SVersion)
+
+        clean::
+            dh_clean
+            rm -rf $(custom_top)
+
+        %:
+            dh $@
+
+        define copy_or_download
+        if [ -r "$(1)" ]; then \\
+            exec cp -p "$(1)" "$(2)"; \\
+        fi; \\
+        pkg=$$(dpkg -S "$(1)" | awk -F: '{print $$1;}'); \\
+        apt-get download $${pkg} || exit 1; \\
+        for deb in $${pkg}_*.deb; do break; done; \\
+        dpkg-deb -x "$$deb" "$$deb--contents" || exit 1; \\
+        cp -p "$$deb--contents$(1)" "$(2)"; \\
+        rm -rf "$$deb--contents"
+        endef
+
+        custom_top=debian/custom
+        custom_dir=$(custom_top)/$(version)
+        custom_tar=$(source)_$(version)_$(arch).tar.gz
+        .PHONY: custom-upload
+        snapd_info=$(firstword $(wildcard /usr/lib/ubuntu-core-initramfs/main/usr/lib/snapd/info /usr/lib/snapd/info))
+        custom-upload:
+            install -d $(custom_dir)/control
+            { echo "tarball"; } >$(custom_dir)/control/options
+            if [ -n "$(snapd_info)" ]; then cp $(snapd_info) $(custom_dir)/snapd-info; fi
+            cd $(custom_top) && tar czvf ../../../$(custom_tar) .
+            dpkg-distaddfile $(custom_tar) raw-signing -
+
+        override_dh_auto_install: generate-$(arch) custom-upload
+            dh_install
+        """), file=ofd)
+
+    for signing in to_sign["files"]:
+        arch = signing["arch"]
+        in_file = signing["file"]
+        out_file = signing["file"]
+        out_file = "$(custom_dir)" + signing["file"] + "." + signing["sig_type"]
+        print(dedent_makefile(f'''\
+
+            .PHONY: generate-{arch}
+            generate-{arch}::
+                install -d {os.path.dirname(out_file)}
+                $(call copy_or_download,{in_file},{out_file})
+            '''), file=ofd)
+        # arm64 platforms normally have compressed gzip'd kernels, these must be
+        # uncompressed for sigining and recompressed later.  Where indicated gunzip
+        # the file and mark it for recompression in -signed.
+        if signing["sig_type"] == "efi" and arch == "arm64":
+            print(dedent_makefile(f'''\
+                    if [ $$(file --brief --mime-type "{out_file}") = "application/gzip" ]; then \\
+                        gunzip -cv <{out_file} >{out_file}.gunzip; \\
+                        mv -f {out_file}.gunzip {out_file}; \\
+                        echo "GZIP=1" >>{out_file}.vars; \\
+                    fi; \\
+                ''', prefix='    '), file=ofd)
+
+os.chmod(out_rules, 0o755)

@@ -1,0 +1,184 @@
+#! /usr/bin/make -f
+
+##export DH_VERBOSE := 1
+
+DEB_HOST_ARCH = $(shell dpkg-architecture -qDEB_HOST_ARCH)
+
+src = $(shell dpkg-parsechangelog -SSource)
+ver = $(shell dpkg-parsechangelog -SVersion)
+abi = $(shell echo "$(ver)" | sed -ne 's/\([0-9]*\.[0-9]*\.[0-9]*\-[0-9]*\)\..*/\1/p')
+series = $(shell dpkg-parsechangelog -SDistribution | sed -e 's/-\(security\|updates\|proposed\)$$//')
+
+generate_src = $(shell echo $(src) | sed -e 's/-signed/-generate/')
+
+# Work out the source package name and version of the unsigned package
+# By convention, it is the name of this package with -signed stripped.
+# The version is identical to this package less any rebuild suffix (+signedN).
+unsigned_src = $(shell echo $(src) | sed -e 's/-signed//')
+unsigned_ver = $(shell echo $(ver) | sed -e 's/+[0-9][0-9]*$$//')
+
+# We build our control file.  This has to be done before dh runs otherwise
+# we have no binary files and we will not run the appropriate targets.
+pre-clean:
+	rm -f debian/control
+	./debian/scripts/generate-control $(series) $(src) $(generate_src) $(ver) $(unsigned_src) $(unsigned_ver) $(abi)
+	./debian/scripts/parameterise-ancillaries $(abi) $(generate_src)
+	rm -rf ./$(unsigned_ver) UNSIGNED SIGNED
+	rm -f 	debian/linux-image-*.install				\
+		debian/linux-image-*.preinst 				\
+		debian/linux-image-*.prerm 				\
+		debian/linux-image-*.postinst 				\
+		debian/linux-image-*.postrm
+	rm -f 	debian/kernel-signed-image-*.install
+
+PHONY: pre-clean
+
+clean:: pre-clean
+
+%:
+	dh $@
+
+override_dh_auto_build: SHELL=/bin/sh -x
+
+override_dh_auto_build:
+	./download-signed "$(generate_src)" "$(ver)" "$(generate_src)"
+	#./download-unsigned "$(DEB_HOST_ARCH)" "$(unsigned_ver)"
+	mkdir SIGNED
+	(									\
+		signed="$(CURDIR)/SIGNED";					\
+		cd "$(ver)/boot" || exit 1;					\
+		for s in *.efi.signed; do					\
+			[ ! -f "$$s" ] && continue;				\
+			base=$$(echo "$$s" | sed -e 's/.efi.signed//');		\
+			flavour=$$(echo "$$base" | sed -e "s@.*-$(abi)-@@");	\
+			verflav="$(abi)-$$flavour";				\
+			if [ -e /usr/lib/linux/$$verflav/canonical-revoked-certs.pem ]; then \
+				awk 'BEGIN {c=0;} /Certificate:/{c++} { print > "revoked-cert." c ".pem"}' < /usr/lib/linux/$$verflav/canonical-revoked-certs.pem; \
+				for cert in revoked-cert.*.pem; do		\
+					echo Checking signature against $$cert; \
+					if sbverify --verbose --verbose --cert $$cert $$s; then \
+						echo Which is bad. EFI binary signed with revoked cert $$cert; \
+						exit 1;				\
+					fi;					\
+				done;						\
+				echo All good. EFI binary not signed with a revoked key.; \
+			fi;							\
+			(							\
+				vars="$${base}.efi.vars";			\
+				[ -f "$$vars" ] && . "./$$vars";		\
+				if [ "$$GZIP" = "1" ]; then			\
+					gzip -9 -n "$$s";			\
+					mv "$${s}.gz" "$$s";			\
+				fi;						\
+			);							\
+			chmod 600 "$$s";					\
+			ln "$$s" "$$signed/$$base";				\
+		done;								\
+		for s in *.opal.sig; do						\
+			[ ! -f "$$s" ] && continue;				\
+			base=$$(echo "$$s" | sed -e 's/.opal.sig//');		\
+			cat "$$base.opal" "$$s" >"$$signed/$$base";		\
+			chmod 600 "$$signed/$$base";				\
+		done;								\
+		for s in *.sipl.sig; do						\
+			[ ! -f "$$s" ] && continue;				\
+			base=$$(echo "$$s" | sed -e 's/.sipl.sig//');		\
+			cat "$$base.sipl" "$$s" >"$$signed/$$base";		\
+			chmod 600 "$$signed/$$base";				\
+		done;								\
+		for s in *.fit.signed; do					\
+			[ ! -f "$$s" ] && continue;				\
+			chmod 600 "$$s";					\
+			base=$$(echo "$$s" | sed -e 's/.fit.signed//');		\
+			ln "$$s" "$$signed/$$base";				\
+		done;								\
+	)
+
+override_dh_auto_install:
+	for signed in "SIGNED"/*; do						\
+		flavour=$$(echo "$$signed" | sed -e "s@.*-$(abi)-@@");		\
+		instfile=$$(echo "$$signed" | sed -e "s@[^/]*/@@"		\
+			-e "s@-$(abi)-.*@@");					\
+		verflav="$(abi)-$$flavour";					\
+										\
+		hmac_pkg="linux-image-hmac-$$verflav";				\
+		if grep -q "^Package: *$$hmac_pkg\$$" debian/control; then	\
+			unsigned_hmac_pkg="linux-image-unsigned-hmac-$$verflav";\
+			hmac="$$(dirname "$$signed")/.$$(basename "$$signed").hmac";	\
+			openssl sha512 -r -hmac FIPS-FTW-RHT2009 "$$signed" |   \
+				awk -vpkg="/boot/$$(basename "$$signed")"	\
+					'{ printf("%s  %s\n", $$1, pkg) }'	\
+				> "$$hmac";					\
+			echo "$$hmac_pkg: adding $$hmac";			\
+			echo "$$hmac boot" >>"debian/$$hmac_pkg.install";	\
+		fi;								\
+										\
+		package="kernel-signed-image-$$verflav-di";			\
+		if grep -q "^Package: *$$package\$$" debian/control; then	\
+			echo "$$package: adding $$signed";			\
+			echo "$$signed boot" >>"debian/$$package.install";	\
+		fi;								\
+										\
+		cvm_pkg="linux-image-$$verflav-fde";				\
+		uc_pkg="linux-image-uc-$$verflav";				\
+		if [ "$$instfile" = "kernel.efi" ]; then			\
+			if grep -q "^Package: *$$cvm_pkg\$$" debian/control; then \
+				package=$$cvm_pkg;				\
+				templates=cvm;					\
+				echo "$$package: adding $$signed";		\
+				echo "$$signed usr/lib/linux/efi" >>"debian/$$package.install";\
+			elif grep -q "^Package: *$$uc_pkg\$$" debian/control; then \
+				package=$$uc_pkg;				\
+				templates=uc;					\
+				echo "$$package: adding $$signed";		\
+				echo "$$signed boot" >>"debian/$$package.install";\
+				case $$flavour in *fips) \
+				hmac="$$(dirname "$$signed")/.$$(basename "$$signed").hmac";	\
+				openssl sha512 -r -hmac FIPS-FTW-RHT2009 "$$signed" |   \
+					awk -vpkg="/boot/$$(basename "$$signed")"	\
+						'{ printf("%s  %s\n", $$1, pkg) }'	\
+					> "$$hmac";					\
+				echo "$$package: adding $$hmac";			\
+				echo "$$hmac boot" >>"debian/$$package.install";	\
+				;; esac;						\
+				snapdinfo=$(ver)/snapd-info;				\
+				echo "$$package: adding $$snapdinfo";			\
+				echo "$$snapdinfo boot" >>"debian/$$package.install";	\
+			else							\
+				continue;					\
+			fi;							\
+		else								\
+			package="linux-image-$$verflav";			\
+			templates=image;					\
+			echo "$$package: adding $$signed";			\
+			echo "$$signed boot" >>"debian/$$package.install";	\
+		fi;								\
+										\
+		./debian/scripts/generate-depends linux-image-unsigned-$$verflav $(unsigned_ver)	\
+			>>"debian/$$package.substvars";	\
+										\
+		for which in postinst postrm preinst prerm; do			\
+			template="debian/templates/$$templates.$$which.in";		\
+			script="debian/$$package.$$which";			\
+			[ -e "$$template" ] &&					\
+			sed -e "s/@abiname@/$(abi)/g"				\
+			    -e "s/@localversion@/-$$flavour/g"			\
+			    -e "s/@image-stem@/$$instfile/g"			\
+				<"$$template" >"$$script";			\
+		done;								\
+		echo "interest linux-update-$(abi)-$$flavour"			\
+			>"debian/$$package.triggers";				\
+	done
+	dh_install
+
+override_dh_builddeb:
+	dh_builddeb
+	for pkg in $$(dh_listpackages); do \
+		case $$pkg in *dbgsym) ;; *) continue ;; esac; \
+		mv ../$${pkg}_$(ver)_$(DEB_HOST_ARCH).deb \
+		   ../$${pkg}_$(ver)_$(DEB_HOST_ARCH).ddeb; \
+		sed -i "/^$${pkg}_/s/\.deb /.ddeb /" debian/files; \
+	done
+
+override_dh_fixperms:
+	dh_fixperms -X/boot/

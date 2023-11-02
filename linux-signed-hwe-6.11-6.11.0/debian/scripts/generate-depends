@@ -1,0 +1,13 @@
+#!/bin/bash
+
+from="$1"
+version="$2"
+
+apt-cache show "$from=$version" | \
+	sed -n \
+	    -e 's/: /=/' \
+	    -e 's/^/unsigned:/' \
+	    -e "s/linux-image-unsigned-/LINUX-IMAGE-UNSIGNED-/" \
+	    -e "s/linux-image-/linux-image-unsigned-/" \
+	    -e "s/LINUX-IMAGE-UNSIGNED-/linux-image-/" \
+	    -e "/^unsigned:\(Depends\|Suggests\|Provides\|Replaces\|Recommends\|Conflicts\)=/p"

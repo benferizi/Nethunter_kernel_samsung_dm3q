@@ -1,0 +1,43 @@
+linux-generate-hwe-6.11 (6.11.0-28.28~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-28.28~24.04.1
+
+  * Packaging resync (LP: #1786013)
+    - [Packaging] update variants
+    - [Packaging] debian/tracking-bug -- resync from main package
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Fri, 23 May 2025 10:59:39 +0200
+
+linux-generate-hwe-6.11 (6.11.0-26.26~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-26.26~24.04.1
+
+  * Packaging resync (LP: #1786013)
+    - [Packaging] debian/tracking-bug -- resync from main package
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Thu, 17 Apr 2025 19:38:17 +0200
+
+linux-generate-hwe-6.11 (6.11.0-25.25~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-25.25~24.04.1
+
+  * Packaging resync (LP: #1786013)
+    - [Packaging] debian/tracking-bug -- resync from main package
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Tue, 15 Apr 2025 15:33:27 +0200
+
+linux-generate-hwe-6.11 (6.11.0-24.24~24.04.1) noble; urgency=medium
+
+  * Main version: 6.11.0-24.24~24.04.1
+
+  * Packaging resync (LP: #1786013)
+    - [Packaging] debian/tracking-bug -- resync from main package
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Tue, 25 Mar 2025 17:36:59 +0100
+
+linux-generate-hwe-6.11 (6.11.0-21.21~24.04.1+1) noble; urgency=medium
+
+  * No-change rebuild request to pick up new core-initramfs.
+
+ -- Stefan Bader <stefan.bader@canonical.com>  Thu, 06 Mar 2025 12:04:52 +0100
+

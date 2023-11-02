@@ -1,0 +1,19 @@
+Source: linux-generate-hwe-6.11
+Section: kernel
+Priority: optional
+Maintainer: Canonical Kernel Team <kernel-team@lists.ubuntu.com>
+Build-Depends:
+ debhelper (>= 9),
+ lsb-release,
+ python3,
+ python3-apt,
+Build-Depends-Arch:
+ linux-image-unsigned-6.11.0-28-generic (= 6.11.0-28.28~24.04.1) [amd64 arm64 s390x],
+ linux-buildinfo-6.11.0-28-generic (= 6.11.0-28.28~24.04.1) [amd64 arm64 s390x],
+ linux-image-unsigned-6.11.0-28-generic-64k (= 6.11.0-28.28~24.04.1) [arm64],
+ linux-buildinfo-6.11.0-28-generic-64k (= 6.11.0-28.28~24.04.1) [arm64],
+ ubuntu-core-initramfs [amd64 arm64],
+ linux-modules-extra-6.11.0-28-generic (= 6.11.0-28.28~24.04.1) [amd64 arm64] ,
+ sbsigntool [amd64 arm64],
+ openssl,
+Standards-Version: 3.9.4

@@ -1,0 +1,74 @@
+Source: linux-signed-hwe-6.11
+Section: kernel
+Priority: optional
+Maintainer: Canonical Kernel Team <kernel-team@lists.ubuntu.com>
+Build-Depends:
+ debhelper (>= 9),
+ lsb-release,
+ python3,
+ python3-apt,
+Build-Depends-Arch:
+ linux-image-unsigned-6.11.0-28-generic (= 6.11.0-28.28~24.04.1) [amd64 arm64 s390x],
+ linux-buildinfo-6.11.0-28-generic (= 6.11.0-28.28~24.04.1) [amd64 arm64 s390x],
+ linux-image-unsigned-6.11.0-28-generic-64k (= 6.11.0-28.28~24.04.1) [arm64],
+ linux-buildinfo-6.11.0-28-generic-64k (= 6.11.0-28.28~24.04.1) [arm64],
+ ubuntu-core-initramfs [amd64 arm64] <pkg.linux-generate>,
+ linux-generate-hwe-6.11 (= 6.11.0-28.28~24.04.1) <!pkg.linux-generate>,
+ linux-modules-extra-6.11.0-28-generic (= 6.11.0-28.28~24.04.1) [amd64 arm64]  <pkg.linux-generate>,
+ sbsigntool [amd64 arm64],
+ openssl,
+Standards-Version: 3.9.4
+
+Package: linux-image-6.11.0-28-generic
+Architecture: amd64 arm64 s390x
+Depends: ${unsigned:Depends}
+Recommends: ${unsigned:Recommends}
+Suggests: ${unsigned:Suggests}
+Conflicts: ${unsigned:Conflicts}
+Provides: ${unsigned:Provides}
+Built-Using: linux-hwe-6.11 (= 6.11.0-28.28~24.04.1)
+Description: Signed kernel image generic
+ A kernel image for generic.  This version of it is signed with
+ Canonical's signing key.
+
+Package: linux-image-6.11.0-28-generic-64k
+Architecture: arm64
+Depends: ${unsigned:Depends}
+Recommends: ${unsigned:Recommends}
+Suggests: ${unsigned:Suggests}
+Conflicts: ${unsigned:Conflicts}
+Provides: ${unsigned:Provides}
+Built-Using: linux-hwe-6.11 (= 6.11.0-28.28~24.04.1)
+Description: Signed kernel image generic-64k
+ A kernel image for generic-64k.  This version of it is signed with
+ Canonical's signing key.
+
+Package: linux-image-uc-6.11.0-28-generic
+Architecture: amd64 arm64
+Depends: linux-modules-6.11.0-28-generic, linux-modules-extra-6.11.0-28-generic [amd64 arm64]
+Built-Using: linux-hwe-6.11 (= 6.11.0-28.28~24.04.1)
+Description: Signed kernel image generic for Ubuntu Core
+ A kernel image for generic.  This version of it is signed with
+ Canonical's signing key.
+
+Package: linux-image-uc-6.11.0-28-generic-64k
+Architecture: arm64
+Depends: linux-modules-6.11.0-28-generic-64k
+Built-Using: linux-hwe-6.11 (= 6.11.0-28.28~24.04.1)
+Description: Signed kernel image generic-64k for Ubuntu Core
+ A kernel image for generic-64k.  This version of it is signed with
+ Canonical's signing key.
+
+Package: linux-image-6.11.0-28-generic-dbgsym
+Section: devel
+Architecture: amd64 arm64 s390x
+Depends: linux-image-unsigned-6.11.0-28-generic-dbgsym
+Description: Signed kernel image generic
+ A link to the debugging symbols for the generic signed kernel.
+
+Package: linux-image-6.11.0-28-generic-64k-dbgsym
+Section: devel
+Architecture: arm64
+Depends: linux-image-unsigned-6.11.0-28-generic-64k-dbgsym
+Description: Signed kernel image generic-64k
+ A link to the debugging symbols for the generic-64k signed kernel.
